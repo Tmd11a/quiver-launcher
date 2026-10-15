@@ -54,6 +54,9 @@ public class BrowseNavigationTests
             // beside the sort: Up climbs line by line to it, and Down comes back the same way to the cards.
             Move(NavigationDirection.Up).Should().BeTrue();
             navigation.ActiveZone.Should().Be(GamepadNavigationZone.BrowseFilters);
+            new Control[] { browse.BrowseStableCheckBox, browse.BrowseBlockedAuthorsButton }
+                .Should().ContainSingle(c => c.Classes.Contains("gamepad-focused"));
+            Move(NavigationDirection.Up).Should().BeTrue();
             new Control[] { browse.BrowseTypeComboBox, browse.BrowsePlatformComboBox, browse.BrowseConsoleComboBox, browse.BrowseAiComboBox }
                 .Should().ContainSingle(c => c.Classes.Contains("gamepad-focused"));
             Move(NavigationDirection.Up).Should().BeTrue();
@@ -64,7 +67,7 @@ public class BrowseNavigationTests
             browse.BrowseHideLibraryCheckBox.Classes.Should().Contain("gamepad-focused");
             Move(NavigationDirection.Right).Should().BeTrue();
             browse.BrowseSortComboBox.Classes.Should().Contain("gamepad-focused");
-            for (var i = 0; i < 3; i++) Move(NavigationDirection.Down).Should().BeTrue();
+            for (var i = 0; i < 4; i++) Move(NavigationDirection.Down).Should().BeTrue();
             navigation.ActiveZone.Should().Be(GamepadNavigationZone.BrowseGrid);
             Move(NavigationDirection.Left).Should().BeTrue();
             navigation.ActiveZone.Should().Be(GamepadNavigationZone.Sidebar);
@@ -177,14 +180,10 @@ public class BrowseNavigationTests
             Move(NavigationDirection.Right).Should().BeTrue();
             Move(NavigationDirection.Up).Should().BeTrue();
             navigation.ActiveZone.Should().Be(GamepadNavigationZone.BrowseFilters);
-            browse.BrowseHideLibraryCheckBox.Classes.Should().Contain("gamepad-focused");
-            Move(NavigationDirection.Up).Should().BeTrue();
-            browse.BrowseConsoleComboBox.Classes.Should().Contain("gamepad-focused");
-            Move(NavigationDirection.Right).Should().BeTrue();
-            browse.BrowseAiComboBox.Classes.Should().Contain("gamepad-focused");
-            Move(NavigationDirection.Up).Should().BeTrue();
-            browse.BrowsePlatformComboBox.Classes.Should().Contain("gamepad-focused");
-            Move(NavigationDirection.Up).Should().BeTrue();
+            new Control[] { browse.BrowseHideLibraryCheckBox, browse.BrowseStableCheckBox, browse.BrowseBlockedAuthorsButton }
+                .Should().ContainSingle(c => c.Classes.Contains("gamepad-focused"));
+            for (var i = 0; i < 5 && !browse.BrowseSearchTextBox.Classes.Contains("gamepad-focused"); i++)
+                Move(NavigationDirection.Up).Should().BeTrue();
             browse.BrowseSearchTextBox.Classes.Should().Contain("gamepad-focused");
             Move(NavigationDirection.Down).Should().BeTrue();
             browse.BrowseTypeComboBox.Classes.Should().Contain("gamepad-focused");
@@ -249,7 +248,7 @@ public class BrowseNavigationTests
             Dispatcher.UIThread.RunJobs();
             window.UpdateLayout();
             var focused = new Control[] { browse.BrowseTypeComboBox, browse.BrowsePlatformComboBox, browse.BrowseConsoleComboBox,
-                browse.BrowseAiComboBox, browse.BrowseHideLibraryCheckBox }.Single(c => c.Classes.Contains("gamepad-focused"));
+                browse.BrowseAiComboBox, browse.BrowseHideLibraryCheckBox, browse.BrowseStableCheckBox, browse.BrowseBlockedAuthorsButton }.Single(c => c.Classes.Contains("gamepad-focused"));
             Top(focused).Should().BeGreaterThanOrEqualTo(-1);
             (Top(focused) + focused.Bounds.Height).Should().BeLessThanOrEqualTo(scroller.Viewport.Height + 1);
         }

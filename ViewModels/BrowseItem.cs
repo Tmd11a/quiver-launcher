@@ -39,6 +39,10 @@ public sealed class BrowseItem : ObservableViewModel, IBrowseCard
     public string Subtitle { get; }
     public string? ImageUrl { get; }
     public string Kind { get; }
+    public string ReleaseVersion => App?.LastReleaseVersion?.Trim() ?? "";
+    public bool HasReleaseVersion => ReleaseVersion.Length > 0;
+    public string Author => App?.Developer?.Name?.Trim() ?? "";
+    public bool HasAuthor => Author.Length > 0;
     public bool HasSubtitle => Subtitle.Length > 0;
     public bool HasKind => Kind.Length > 0;
 
@@ -167,6 +171,15 @@ public static class BrowseText
 
     public static readonly IReadOnlyList<(string? Id, string Name)> AiFilters =
         [(null, "Show all apps"), ("no-generated", "Hide mostly AI-generated apps"), ("no-ai", "Hide apps with any AI use")];
+
+    /// <summary>Numeric release tags with major version >= 1; prereleases and unknown formats are excluded.</summary>
+    public static bool IsStableVersionOneOrAbove(string? version)
+    {
+        if (string.IsNullOrWhiteSpace(version)) return false;
+        var match = System.Text.RegularExpressions.Regex.Match(version.Trim(),
+            @"^[vV]?(?<major>0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){0,2}(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$");
+        return match.Success && ulong.TryParse(match.Groups["major"].Value, out var major) && major >= 1;
+    }
 
     public static string? CurrentPlatform =>
         OperatingSystem.IsAndroid() ? "android" : OperatingSystem.IsWindows() ? "windows"

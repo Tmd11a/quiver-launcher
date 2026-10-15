@@ -48,7 +48,12 @@ public sealed class BrowseViewModel(QuiverCatalogClient client, Func<IReadOnlyLi
     public int Total { get => _total; private set => Set(ref _total, value); }
     public bool HasCustomList => !string.IsNullOrWhiteSpace(customListLocation());
     public bool ShowingCustomList { get => _showingCustomList && HasCustomList; set => Set(ref _showingCustomList, value); }
-    public bool HasFilters => Platform != BrowseText.CurrentPlatform || Console != null || ProjectType != null;
+    public bool StableReleasesOnly { get; set; }
+    public HashSet<string> BlockedAuthors { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    private bool MatchesCatalogPreferences(QuiverCatalogApp app) =>
+        !BlockedAuthors.Contains(app.Developer?.Name?.Trim() ?? "") &&
+        (!StableReleasesOnly || BrowseText.IsStableVersionOneOrAbove(app.LastReleaseVersion));
+    public bool HasFilters => StableReleasesOnly || Platform != BrowseText.CurrentPlatform || Console != null || ProjectType != null;
     public bool IsLoading { get => _isLoading; private set => Set(ref _isLoading, value); }
     public bool IsLoadingMore { get => _isLoadingMore; private set => Set(ref _isLoadingMore, value); }
     public bool CanLoadMore => _cursor != null && !IsLoading && !IsLoadingMore && !ShowingCustomList;
@@ -62,6 +67,7 @@ public sealed class BrowseViewModel(QuiverCatalogClient client, Func<IReadOnlyLi
         Platform = BrowseText.CurrentPlatform;
         Console = null;
         ProjectType = null;
+        StableReleasesOnly = false;
     }
 
     /// <summary>A maker's heading in the console list, as the website words it.</summary>
@@ -145,7 +151,7 @@ public sealed class BrowseViewModel(QuiverCatalogClient client, Func<IReadOnlyLi
     {
         var search = Search.Trim();
         if (search.Length < 2) return;
-        var matched = apps.SelectMany(a => a.Games).Where(g => !string.IsNullOrWhiteSpace(g.Slug) && BrowseText.TitleMatches(g.Title, search))
+        var matched = apps.Where(MatchesCatalogPreferences).SelectMany(a => a.Games).Where(g => !string.IsNullOrWhiteSpace(g.Slug) && BrowseText.TitleMatches(g.Title, search))
             .DistinctBy(g => g.Slug, StringComparer.OrdinalIgnoreCase).Take(4).ToList();
         if (matched.Count == 0) return;
         try
@@ -153,8 +159,8 @@ public sealed class BrowseViewModel(QuiverCatalogClient client, Func<IReadOnlyLi
             var details = await Task.WhenAll(matched.Select(g => GetGameAsync(g.Slug, token)));
             if (generation != _generation) return;
             foreach (var detail in details)
-                if (detail is { Entries.Count: > 0 } found)
-                    Games.Add(new BrowseGame(found.Game.Slug, found.Game.Title, BrowseGame.ArtFor(found.Game), found.Entries.Count));
+                if (detail is { } found && found.Entries.Count(MatchesCatalogPreferences) is > 0 and var count)
+                    Games.Add(new BrowseGame(found.Game.Slug, found.Game.Title, BrowseGame.ArtFor(found.Game), count));
             Notify(nameof(HasGames));
         }
         // The apps still show; the games row is a shortcut to them.
@@ -243,7 +249,7 @@ public sealed class BrowseViewModel(QuiverCatalogClient client, Func<IReadOnlyLi
     /// <summary>A game's apps as cards, best first, as on its page.</summary>
     public List<BrowseItem> CardsFor(QuiverCatalogGameDetail game)
     {
-        var cards = game.Entries.Select(app => BrowseItem.FromCatalog(app, _consoleNames)).ToList();
+        var cards = game.Entries.Where(MatchesCatalogPreferences).Select(app => BrowseItem.FromCatalog(app, _consoleNames)).ToList();
         MarkLibraryState(cards);
         return cards;
     }
@@ -292,6 +298,7 @@ public sealed class BrowseViewModel(QuiverCatalogClient client, Func<IReadOnlyLi
         var hidden = 0;
         foreach (var card in cards)
         {
+            if (card.App != null && !MatchesCatalogPreferences(card.App)) continue;
             if (HideLibraryApps && card.InLibrary) hidden++;
             else Items.Add(card);
         }
@@ -301,7 +308,7 @@ public sealed class BrowseViewModel(QuiverCatalogClient client, Func<IReadOnlyLi
     // With library apps hidden a page can come back nearly empty: read on until enough cards show. False once a newer load took over.
     private async Task<bool> FillAsync(QuiverCatalogQuery query, int generation, int wanted, CancellationToken token)
     {
-        while (HideLibraryApps && Items.Count < wanted && _cursor != null)
+        while ((HideLibraryApps || StableReleasesOnly || BlockedAuthors.Count > 0) && Items.Count < wanted && _cursor != null)
         {
             var page = await client.GetAppsAsync(query, _cursor, token);
             if (generation != _generation) return false;

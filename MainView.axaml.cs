@@ -286,6 +286,13 @@ namespace QuiverLauncher
                 _settings.CatalogHideLibraryApps = hide;
                 _settingsViewModel.Save(_settings);
             };
+            BrowsePanel.Model.BlockedAuthors = new HashSet<string>(_settings.CatalogBlockedAuthors
+                .Where(a => !string.IsNullOrWhiteSpace(a)).Select(a => a.Trim()), StringComparer.OrdinalIgnoreCase);
+            BrowsePanel.BlockedAuthorsChosen += authors =>
+            {
+                _settings.CatalogBlockedAuthors = authors.ToList();
+                _settingsViewModel.Save(_settings);
+            };
             BrowsePanel.GameRequested += OpenBrowseGame;
             BrowsePanel.Model.Ai = BrowseText.AiFilters.Any(f => f.Id != null && f.Id == _settings.CatalogAiFilter) ? _settings.CatalogAiFilter : null;
             BrowsePanel.AiFilterChosen += ai =>

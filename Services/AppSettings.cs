@@ -97,6 +97,7 @@ namespace QuiverLauncher
         /// <summary>The player's own app list for Browse: a local JSON file or a URL, in the apps.json format.</summary>
         public string CustomAppListLocation { get; set; } = string.Empty;
         /// <summary>The App Catalog's AI filter ("no-generated" or "no-ai"), kept like the website keeps it; empty shows every app.</summary>
+        public List<string> CatalogBlockedAuthors { get; set; } = [];
         public string CatalogAiFilter { get; set; } = string.Empty;
         /// <summary>The App Catalog leaves out apps already in the library, so new ones are easier to find.</summary>
         public bool CatalogHideLibraryApps { get; set; } = true;
@@ -198,6 +199,7 @@ namespace QuiverLauncher
             UsageDataInstallId ??= string.Empty;
             if (UsageDataEnabled && UsageDataInstallId.Length == 0)
                 UsageDataInstallId = Guid.NewGuid().ToString();
+            CatalogBlockedAuthors ??= [];
             CatalogAiFilter ??= string.Empty;
             if (AppCatalogSources != null)
             {

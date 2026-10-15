@@ -236,6 +236,13 @@
 				</Grid>
 				<services:HoverScrollText Classes="browse-title" Text="{Binding Title}" IsActive="{Binding ShouldScroll}"
 										  FontWeight="SemiBold" Foreground="{DynamicResource ThemeText}"/>
+                <TextBlock Text="{Binding ReleaseVersion}" IsVisible="{Binding HasReleaseVersion}"
+                           FontSize="12" FontWeight="SemiBold" Margin="0,6,0,0"
+                           TextTrimming="CharacterEllipsis" ToolTip.Tip="Latest release version"
+                           Foreground="{DynamicResource ThemeText}"/>
+                <TextBlock Text="{Binding Author}" IsVisible="{Binding HasAuthor}"
+                           FontSize="11" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{Binding Author}" Foreground="{DynamicResource ThemeTextSecondary}"/>
 				<Grid ColumnDefinitions="Auto,*" Margin="0,8,0,0" IsVisible="{Binding HasBasedOn}">
 					<TextBlock Grid.Column="0" Classes="browse-based-on" Text="BASED ON" Margin="0,0,6,0"/>
 					<services:HoverScrollRow Grid.Column="1" IsActive="{Binding ShouldScroll}" HorizontalAlignment="Left">

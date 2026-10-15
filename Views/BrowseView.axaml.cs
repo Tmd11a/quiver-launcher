@@ -51,6 +51,7 @@ public partial class BrowseView : UserControl
     public event Action<bool>? HideLibraryChosen;
     /// <summary>The player chose an AI filter; the shell keeps it for next time, as the website does.</summary>
     public event Action<string?>? AiFilterChosen;
+    public event Action<IReadOnlyList<string>>? BlockedAuthorsChosen;
 
     public BrowseView()
     {
@@ -315,6 +316,10 @@ public partial class BrowseView : UserControl
             BrowseSortLabel.IsVisible = !custom && !searching && !IsMobileLayout;
             BrowseRelevantText.IsVisible = !custom && searching;
             BrowseHideLibraryCheckBox.IsChecked = Model.HideLibraryApps;
+            BrowseStableCheckBox.IsVisible = BrowseBlockedAuthorsButton.IsVisible = !custom;
+            BrowseStableCheckBox.IsChecked = Model.StableReleasesOnly;
+            BrowseBlockedAuthorsButton.Content = $"Blocked authors ({Model.BlockedAuthors.Count})";
+            if (custom) BrowseBlockedAuthorsEditor.IsVisible = false;
             // A search says what it shows, as on the website, and hidden library apps are counted so none seems to be missing.
             var hidden = Model.HiddenInLibrary == 0 ? ""
                 : Model.HiddenInLibrary == 1 ? "1 app in your library is hidden" : $"{Model.HiddenInLibrary} apps in your library are hidden";
@@ -403,6 +408,34 @@ public partial class BrowseView : UserControl
         if (hide == Model.HideLibraryApps) return;
         Model.HideLibraryApps = hide;
         HideLibraryChosen?.Invoke(hide);
+        Reload();
+    }
+
+    private void BrowseStable_Changed(object? sender, RoutedEventArgs e)
+    {
+        if (Model == null || _updatingControls) return;
+        Model.StableReleasesOnly = BrowseStableCheckBox.IsChecked == true;
+        Reload();
+    }
+
+    private void BrowseBlockedAuthors_Click(object? sender, RoutedEventArgs e)
+    {
+        BrowseBlockedAuthorsEditor.IsVisible = !BrowseBlockedAuthorsEditor.IsVisible;
+        if (BrowseBlockedAuthorsEditor.IsVisible)
+        {
+            BrowseBlockedAuthorsTextBox.Text = string.Join(", ", Model.BlockedAuthors.Order(StringComparer.OrdinalIgnoreCase));
+            BrowseBlockedAuthorsTextBox.Focus();
+        }
+    }
+
+    private void BrowseSaveBlockedAuthors_Click(object? sender, RoutedEventArgs e)
+    {
+        var authors = (BrowseBlockedAuthorsTextBox.Text ?? "").Split([',', '\n', '\r'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        Model.BlockedAuthors = new HashSet<string>(authors, StringComparer.OrdinalIgnoreCase);
+        BlockedAuthorsChosen?.Invoke(authors);
+        BrowseBlockedAuthorsEditor.IsVisible = false;
+        BrowseBlockedAuthorsButton.Focus();
         Reload();
     }
 

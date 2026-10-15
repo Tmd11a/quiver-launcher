@@ -43,6 +43,73 @@ public class BrowseTests : IDisposable
             listLocation ?? (() => ""), loadList ?? (_ => Task.FromResult<(List<GameInfo> Apps, string? Error)>((new List<GameInfo>(), null))));
 
     [Theory]
+    [InlineData("v1.0", true)]
+    [InlineData("2.3.1", true)]
+    [InlineData("v1.0.0+build.5", true)]
+    [InlineData("0.99.9", false)]
+    [InlineData("v2.0.0-rc.1", false)]
+    [InlineData("nightly", false)]
+    [InlineData("20261014", false)]
+    [InlineData(null, false)]
+    public void Stable_release_filter_requires_a_numeric_release_without_a_prerelease_suffix(string? version, bool expected)
+    {
+        BrowseText.IsStableVersionOneOrAbove(version).Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task Local_catalog_filters_read_past_excluded_pages_and_apply_to_game_cards()
+    {
+        static object App(string slug, string author, string? version) => new
+        {
+            id = slug, slug, name = slug, developer = new { name = author }, lastReleaseVersion = version,
+        };
+        var handler = new Handler(request => Task.FromResult(Json(JsonSerializer.Serialize(new
+        {
+            items = request.RequestUri!.Query.Contains("cursor=next")
+                ? new[] { App("stable", "Allowed", "v1.2") }
+                : new[] { App("blocked", "  BLOCKED  ", "v2.0"), App("preview", "Allowed", "v1.0-rc.1"), App("unknown", "Allowed", null) },
+            nextCursor = request.RequestUri.Query.Contains("cursor=next") ? null : "next",
+            isDone = request.RequestUri.Query.Contains("cursor=next"),
+        }))));
+        var browse = Browse(handler);
+        browse.HideLibraryApps = false;
+        browse.StableReleasesOnly = true;
+        browse.BlockedAuthors.Add("blocked");
+        await browse.ReloadAsync(TestContext.Current.CancellationToken);
+        browse.Items.Select(i => i.Title).Should().Equal("stable");
+        browse.Items[0].ReleaseVersion.Should().Be("v1.2");
+        handler.AppQueries.Should().HaveCount(2);
+        browse.CanLoadMore.Should().BeFalse();
+
+        var game = new QuiverCatalogGameDetail
+        {
+            Entries = [
+                new() { Name = "blocked", Developer = new() { Name = "Blocked" }, LastReleaseVersion = "v3.0" },
+                new() { Name = "preview", LastReleaseVersion = "v0.5" },
+                new() { Name = "stable", LastReleaseVersion = "v1.0" },
+            ],
+        };
+        browse.CardsFor(game).Select(i => i.Title).Should().Equal("stable");
+        browse.ClearFilters();
+        browse.StableReleasesOnly.Should().BeFalse();
+        browse.BlockedAuthors.Should().Contain("blocked");
+        browse.CardsFor(game).Select(i => i.Title).Should().Equal("preview", "stable");
+        browse.BlockedAuthors.Clear();
+        browse.CardsFor(game).Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void Blocked_authors_survive_settings_reload()
+    {
+        Directory.CreateDirectory(_directory);
+        var path = Path.Combine(_directory, "blocked-authors.json");
+        var store = new FileSettingsStore(path);
+        store.Current.CatalogBlockedAuthors = ["Example developer"];
+        store.Save(store.Current);
+        new FileSettingsStore(path).Current.CatalogBlockedAuthors.Should().Equal("Example developer");
+    }
+
+    [Theory]
     [InlineData(true, "https://example.com/my-apps.json")]
     [InlineData(false, "")]
     public void Settings_from_3_4_keep_the_players_own_list_and_stop_writing_catalog_sources(bool hasOwnList, string expectedList)

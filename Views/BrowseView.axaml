@@ -136,6 +136,19 @@
 						  VerticalAlignment="Center" Foreground="{DynamicResource ThemeText}"
 						  ToolTip.Tip="Leaves out apps you already have, so new ones are easier to find"
 						  IsCheckedChanged="BrowseHideLibrary_Changed"/>
+                <CheckBox x:Name="BrowseStableCheckBox" Content="Stable v1.0+" FontSize="12" Margin="0,0,14,0"
+                          ToolTip.Tip="Show numeric releases v1.0 and above. Excludes prereleases and unknown versions; does not guarantee completeness."
+                          IsCheckedChanged="BrowseStable_Changed"/>
+                <Button x:Name="BrowseBlockedAuthorsButton" Classes="options" Content="Blocked authors"
+                        FontSize="12" MinHeight="40" Margin="0,0,10,0" Click="BrowseBlockedAuthors_Click"/>
+                <StackPanel x:Name="BrowseBlockedAuthorsEditor" Width="280" Spacing="6" Margin="0,6,14,6" IsVisible="False">
+                    <TextBlock Text="Enter exact developer names, separated by commas. Remove a name to unblock it."
+                               FontSize="11" TextWrapping="Wrap"/>
+                    <TextBox x:Name="BrowseBlockedAuthorsTextBox" Watermark="Developer names"
+                             AutomationProperties.Name="Blocked developer names"/>
+                    <Button x:Name="BrowseSaveBlockedAuthorsButton" Content="Save blocked authors" Classes="options"
+                            Click="BrowseSaveBlockedAuthors_Click"/>
+                </StackPanel>
 				<Button x:Name="BrowseRetryButton" Classes="options" Content="Try again" FontSize="12" MinHeight="40"
 						Margin="0,0,10,0" IsVisible="False" Click="BrowseRetry_Click"/>
 				<Button x:Name="BrowseClearFiltersButton" Classes="options" Content="Clear filters" FontSize="12" MinHeight="40"
